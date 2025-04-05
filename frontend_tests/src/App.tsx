@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactFlow from 'reactflow';
+import ReactFlow, { ReactFlowProvider } from 'reactflow';
 import 'reactflow/dist/style.css';
 
 const nodes = [
@@ -13,7 +13,7 @@ const nodes = [
     id: 'end',
     type: 'output',
     data: { label: 'End Node' },
-    position: { x: 400, y: 100 },
+    position: { x: 100, y: 300 },
   },
 ];
 
@@ -21,11 +21,19 @@ const edges = [
   { id: 'e1-2', source: 'start', target: 'end', type: 'smoothstep' },
 ];
 
-function App() {
+function FlowCanvas() {
   return (
-    <div style={{ width: '100%', height: '100vh' }}>
+    <div style={{ width: '100vw', height: '100vh' }}>
       <ReactFlow nodes={nodes} edges={edges} fitView />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ReactFlowProvider>
+      <FlowCanvas />
+    </ReactFlowProvider>
   );
 }
 
