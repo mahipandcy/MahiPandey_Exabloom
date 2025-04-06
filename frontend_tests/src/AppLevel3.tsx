@@ -15,7 +15,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { nodeTypes } from './nodeTypes';
 
-let id = 2; // Start is node-1, end is node-2
+let id = 2;
 const getId = () => `node-${id++}`;
 
 type WorkflowNode = {
@@ -47,7 +47,6 @@ export default function AppLevel3() {
       const [parsedParentId, idx] = afterId.split('-branch-');
       effectiveParentId = parsedParentId;
       effectiveBranchIndex = parseInt(idx);
-
       const branchNodes = workflowNodes.filter(
         (n) => n.parentId === parsedParentId && n.branchIndex === parseInt(idx)
       );
@@ -80,7 +79,6 @@ export default function AppLevel3() {
 
     const updated = [...workflowNodes];
     updated.splice(insertIndex + 1, 0, newNode);
-
     setWorkflowNodes(updated);
   };
 
@@ -156,6 +154,14 @@ export default function AppLevel3() {
               }
             : {
                 label: n.data.label,
+                onLabelChange: (id: string, newLabel: string) =>
+                  setWorkflowNodes((prev) =>
+                    prev.map((node) =>
+                      node.id === id
+                        ? { ...node, data: { ...node.data, label: newLabel } }
+                        : node
+                    )
+                  ),
                 onDelete: (id: string) =>
                   setWorkflowNodes((prev) => prev.filter((node) => node.id !== id)),
                 onSelect: (type: 'action' | 'ifElse') =>
