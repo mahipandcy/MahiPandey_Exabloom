@@ -53,7 +53,7 @@ node generate_data.js
 ---
 ### 🖥️ Run the Server
 ```bash
-    node server.js
+node server.js
 ```
 Server run at:
 ```bash
@@ -63,10 +63,10 @@ http://localhost:3000
 ---
 📡 API Endpoints
 
-🔹 GET /conversations?page=1
+🔹 [GET /conversations?page=1](http://localhost:3000/conversations?page=1)
 Returns 50 most recent conversations (latest message per contact).
 
-🔹 GET /conversations/search?value=fish&page=1
+🔹 [GET /conversations/search?value=fish&page=1](http://localhost:3000/conversations/search?value=fish&page=1)
 Searches by:
 
 - Contact name
