@@ -1,4 +1,5 @@
-DROP TABLE IF EXISTS messages, contacts;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS contacts;
 
 CREATE TABLE contacts (
   id SERIAL PRIMARY KEY,
