@@ -50,7 +50,8 @@ async function generateContactsAndMessages() {
       continue;
     }
 
-    const numMessages = Math.floor(Math.random() * 100); // up to 100 messages
+    const numMessages = 50;
+
     const messagePromises = [];
 
     for (let j = 0; j < numMessages; j++) {
