@@ -1,83 +1,35 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import ReactFlow, {
-  ReactFlowProvider,
+  Background,
+  Controls,
+  MiniMap,
   Node,
   Edge,
-  Background,
-  MiniMap,
-  Controls,
-  applyNodeChanges,
+  ReactFlowProvider,
   applyEdgeChanges,
-  OnNodesChange,
-  OnEdgesChange,
+  applyNodeChanges,
+  NodeChange,
+  EdgeChange,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { nodeTypes } from './nodeTypes';
 
+let id = 1;
+const getId = () => `node-${id++}`;
+
 type WorkflowNode = {
   id: string;
-  type: 'start' | 'action' | 'ifElse' | 'end' | 'branchLabel';
+  type: string;
+  data: any;
   parentId?: string;
   branchIndex?: number;
   depth?: number;
-  data: any;
 };
-
-let idCounter = 1;
-const getId = () => `node-${idCounter++}`;
 
 export default function AppLevel3() {
   const [workflowNodes, setWorkflowNodes] = useState<WorkflowNode[]>([
     { id: 'start', type: 'start', data: { label: 'Start Node' } },
   ]);
-
-  const onLabelChange = (id: string, newLabel: string) => {
-    setWorkflowNodes((prev) =>
-      prev.map((node) =>
-        node.id === id ? { ...node, data: { ...node.data, label: newLabel } } : node
-      )
-    );
-  };
-
-  const onBranchLabelChange = (id: string, index: number, newLabel: string) => {
-    setWorkflowNodes((prev) =>
-      prev.map((node) =>
-        node.id === id
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                branches: node.data.branches.map((b: string, i: number) =>
-                  i === index ? newLabel : b
-                ),
-              },
-            }
-          : node
-      )
-    );
-  };
-
-  const onAddBranch = (id: string) => {
-    setWorkflowNodes((prev) =>
-      prev.map((node) =>
-        node.id === id
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                branches: [...node.data.branches, `Branch #${node.data.branches.length}`],
-              },
-            }
-          : node
-      )
-    );
-  };
-
-  const onDelete = (id: string) => {
-    setWorkflowNodes((prev) =>
-      prev.filter((node) => node.id !== id && node.parentId !== id)
-    );
-  };
 
   const handleAddNodeAfter = (
     afterId: string,
@@ -87,94 +39,148 @@ export default function AppLevel3() {
   ) => {
     const index = workflowNodes.findIndex((n) => n.id === afterId);
     const depth =
-      workflowNodes
-        .filter((n) => n.parentId === parentId && n.branchIndex === branchIndex)
-        .filter((n) => n.id !== afterId).length + 1;
+      workflowNodes.filter(
+        (n) => n.parentId === parentId && n.branchIndex === branchIndex
+      ).length + 1;
 
     const newId = getId();
     const newNode: WorkflowNode = {
       id: newId,
       type: nodeType,
-      data:
-        nodeType === 'action'
-          ? { label: 'Action Node', onLabelChange, onDelete }
-          : nodeType === 'ifElse'
-          ? {
-              label: 'If/Else Node',
-              branches: ['Branch #1', 'Else'],
-              onLabelChange,
-              onBranchLabelChange,
-              onAddBranch,
-              onDelete,
-            }
-          : { label: 'End Node' },
+      data: {
+        label:
+          nodeType === 'ifElse'
+            ? 'If/Else Node'
+            : nodeType === 'end'
+            ? 'End Node'
+            : 'Action Node',
+      },
       parentId,
       branchIndex,
       depth,
     };
 
-    const newList = [...workflowNodes];
-    newList.splice(index + 1, 0, newNode);
-    setWorkflowNodes(newList);
+    if (nodeType === 'ifElse') {
+      newNode.data.branches = ['Branch #1', 'Else'];
+    }
+
+    const updated = [...workflowNodes];
+    updated.splice(index + 1, 0, newNode);
+
+    if (nodeType === 'action' && typeof branchIndex === 'number' && parentId) {
+      const endNodeId = getId();
+      updated.splice(index + 2, 0, {
+        id: endNodeId,
+        type: 'end',
+        data: { label: 'End Node' },
+        parentId,
+        branchIndex,
+        depth: depth + 1,
+      });
+    }
+
+    setWorkflowNodes(updated);
   };
 
-  const buildDisplayNodes = (): Node[] => {
+  const buildNodes = (): Node[] => {
     const nodes: Node[] = [];
     const spacingX = 200;
     const spacingY = 140;
 
-    workflowNodes.forEach((node, index) => {
-      const isBranch = node.parentId && typeof node.branchIndex === 'number';
-      const baseX = 250;
-      const xOffset = isBranch ? (node.branchIndex ?? 0) * spacingX : 0;
-      const x = baseX + xOffset - (isBranch ? 150 : 0);
-
-      const baseY = isBranch ? 400 : 0;
-      const y = baseY + (node.depth ?? index) * spacingY;
+    workflowNodes.forEach((n, i) => {
+      const isBranch = n.parentId && typeof n.branchIndex === 'number';
+      const x = isBranch ? 250 + (n.branchIndex ?? 0) * spacingX - 150 : 250;
+      const y = isBranch ? 400 + (n.depth ?? 0) * spacingY : i * spacingY * 2;
 
       nodes.push({
-        id: node.id,
+        id: n.id,
         type:
-          node.type === 'action'
+          n.type === 'action'
             ? 'actionNode'
-            : node.type === 'ifElse'
+            : n.type === 'ifElse'
             ? 'ifElseNode'
-            : node.type === 'branchLabel'
+            : n.type === 'branchLabel'
             ? 'branchLabelNode'
-            : node.type,
+            : n.type,
         position: { x, y },
-        data: {
-          ...node.data,
-          onLabelChange,
-          onDelete,
-          onBranchLabelChange,
-          onAddBranch,
-        },
+        data:
+          n.type === 'ifElse'
+            ? {
+                label: n.data.label,
+                branches: n.data.branches ?? ['Branch #1', 'Else'],
+                onLabelChange: (id: string, newLabel: string) =>
+                  setWorkflowNodes((prev) =>
+                    prev.map((node) =>
+                      node.id === id ? { ...node, data: { ...node.data, label: newLabel } } : node
+                    )
+                  ),
+                onBranchLabelChange: (id: string, index: number, value: string) =>
+                  setWorkflowNodes((prev) =>
+                    prev.map((node) =>
+                      node.id === id
+                        ? {
+                            ...node,
+                            data: {
+                              ...node.data,
+                              branches: node.data.branches.map((b: string, i: number) =>
+                                i === index ? value : b
+                              ),
+                            },
+                          }
+                        : node
+                    )
+                  ),
+                onAddBranch: (id: string) =>
+                  setWorkflowNodes((prev) =>
+                    prev.map((node) =>
+                      node.id === id
+                        ? {
+                            ...node,
+                            data: {
+                              ...node.data,
+                              branches: [
+                                ...node.data.branches,
+                                `Branch #${node.data.branches.length + 1}`,
+                              ],
+                            },
+                          }
+                        : node
+                    )
+                  ),
+                onDelete: (id: string) =>
+                  setWorkflowNodes((prev) =>
+                    prev.filter((node) => node.id !== id && node.parentId !== id)
+                  ),
+              }
+            : {
+                label: n.data.label,
+                onDelete: (id: string) =>
+                  setWorkflowNodes((prev) => prev.filter((node) => node.id !== id)),
+                onSelect: (type: 'action' | 'ifElse' | 'end') =>
+                  handleAddNodeAfter(n.id, type, n.parentId, n.branchIndex),
+              },
         draggable: true,
       });
 
-      const shouldShowAddButton = node.type !== 'end';
-
-      if (shouldShowAddButton) {
+      if (n.type !== 'end' && n.type !== 'branchLabel') {
         nodes.push({
-          id: `add-${node.id}`,
+          id: `add-${n.id}`,
           type: 'addButton',
           data: {
             onSelect: (type: 'action' | 'ifElse' | 'end') =>
-              handleAddNodeAfter(node.id, type, node.parentId, node.branchIndex),
+              handleAddNodeAfter(n.id, type, n.parentId, n.branchIndex),
           },
           position: { x, y: y + 70 },
           draggable: false,
         });
       }
 
-      if (node.type === 'ifElse') {
-        const branches: string[] = node.data.branches || [];
+      if (n.type === 'ifElse') {
+        const branches = n.data.branches ?? ['Branch #1', 'Else'];
         const startX = 250 - ((branches.length - 1) * spacingX) / 2;
-
-        branches.forEach((label: string, i: number) => {
-          const branchId = `${node.id}-branch-${i}`;
-          const bx = startX + i * spacingX;
+        branches.forEach((label: string, idx: number) => {
+          const branchId = `${n.id}-branch-${idx}`;
+          const bx = startX + idx * spacingX;
           const by = y + 100;
 
           nodes.push({
@@ -190,7 +196,7 @@ export default function AppLevel3() {
             type: 'addButton',
             data: {
               onSelect: (type: 'action' | 'ifElse' | 'end') =>
-                handleAddNodeAfter(branchId, type, node.id, i),
+                handleAddNodeAfter(branchId, type, n.id, idx),
             },
             position: { x: bx, y: by + 60 },
             draggable: false,
@@ -208,102 +214,49 @@ export default function AppLevel3() {
     workflowNodes.forEach((node, i) => {
       const next = workflowNodes[i + 1];
 
-      if (!node.parentId && next && !next.parentId) {
-        edges.push({
-          id: `e-${node.id}-add-${node.id}`,
-          source: node.id,
-          target: `add-${node.id}`,
-          type: 'smoothstep',
-        });
-        edges.push({
-          id: `e-add-${node.id}-${next.id}`,
-          source: `add-${node.id}`,
-          target: next.id,
-          type: 'smoothstep',
-        });
+      if (
+        !node.parentId &&
+        next &&
+        !next.parentId &&
+        node.id !== next.id &&
+        next.id !== `add-${node.id}`
+      ) {
+        edges.push({ id: `e-${node.id}-add-${node.id}`, source: node.id, target: `add-${node.id}`, type: 'smoothstep' });
+        edges.push({ id: `e-add-${node.id}-${next.id}`, source: `add-${node.id}`, target: next.id, type: 'smoothstep' });
       }
 
       if (node.type === 'ifElse') {
-        (node.data.branches || []).forEach((_: string, i: number) => {
-          const branchNodeId = `${node.id}-branch-${i}`;
-          edges.push({
-            id: `e-${node.id}-${branchNodeId}`,
-            source: node.id,
-            target: branchNodeId,
-            type: 'smoothstep',
-          });
-          edges.push({
-            id: `e-${branchNodeId}-add`,
-            source: branchNodeId,
-            target: `add-${branchNodeId}`,
-            type: 'smoothstep',
-          });
+        (node.data.branches ?? ['Branch #1', 'Else']).forEach((branchLabel: string, idx: number) => {
+          const branchNodeId = `${node.id}-branch-${idx}`;
+          edges.push({ id: `e-${node.id}-${branchNodeId}`, source: node.id, target: branchNodeId, type: 'smoothstep' });
+          edges.push({ id: `e-${branchNodeId}-add`, source: branchNodeId, target: `add-${branchNodeId}`, type: 'smoothstep' });
         });
       }
 
-      if (node.parentId && typeof node.branchIndex === 'number') {
-        const addId = `add-${node.id}`;
-        if (node.type !== 'end') {
-          edges.push({
-            id: `e-${node.id}-${addId}`,
-            source: node.id,
-            target: addId,
-            type: 'smoothstep',
-          });
-        }
-
-        const next = workflowNodes[i + 1];
-        if (
-          next &&
-          next.parentId === node.parentId &&
-          next.branchIndex === node.branchIndex
-        ) {
-          edges.push({
-            id: `e-add-${node.id}-${next.id}`,
-            source: addId,
-            target: next.id,
-            type: 'smoothstep',
-          });
-        }
-
-        if (node.type !== 'end' && next?.type === 'end') {
-          edges.push({
-            id: `e-${node.id}-${next.id}`,
-            source: node.id,
-            target: next.id,
-            type: 'smoothstep',
-          });
+      if (node.parentId && typeof node.branchIndex === 'number' && node.type !== 'end') {
+        const nextNode = workflowNodes[i + 1];
+        edges.push({ id: `e-${node.id}-add-${node.id}`, source: node.id, target: `add-${node.id}`, type: 'smoothstep' });
+        if (nextNode && nextNode.parentId === node.parentId && nextNode.branchIndex === node.branchIndex) {
+          edges.push({ id: `e-add-${node.id}-${nextNode.id}`, source: `add-${node.id}`, target: nextNode.id, type: 'smoothstep' });
         }
       }
 
       if (node.type === 'end' && node.parentId) {
-        edges.push({
-          id: `e-${node.parentId}-${node.id}`,
-          source: node.parentId,
-          target: node.id,
-          type: 'smoothstep',
-        });
+        edges.push({ id: `e-${node.parentId}-${node.id}`, source: node.parentId, target: node.id, type: 'smoothstep' });
       }
     });
 
     return edges;
   };
 
-  const [rfNodes, setRfNodes] = useState<Node[]>(buildDisplayNodes());
+  const [rfNodes, setRfNodes] = useState<Node[]>(buildNodes());
   const [rfEdges, setRfEdges] = useState<Edge[]>(buildEdges());
 
-  const onNodesChange: OnNodesChange = useCallback(
-    (changes) => setRfNodes((nds) => applyNodeChanges(changes, nds)),
-    []
-  );
-
-  const onEdgesChange: OnEdgesChange = useCallback(
-    (changes) => setRfEdges((eds) => applyEdgeChanges(changes, eds)),
-    []
-  );
+  const onNodesChange = useCallback((changes: NodeChange[]) => setRfNodes((nds) => applyNodeChanges(changes, nds)), []);
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => setRfEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
   useEffect(() => {
-    setRfNodes(buildDisplayNodes());
+    setRfNodes(buildNodes());
     setRfEdges(buildEdges());
   }, [workflowNodes]);
 
@@ -317,7 +270,6 @@ export default function AppLevel3() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           fitView
-          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         >
           <MiniMap />
           <Controls />

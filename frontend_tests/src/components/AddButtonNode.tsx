@@ -6,7 +6,9 @@ export default function AddButtonNode({ data }: any) {
 
   const handleSelect = (type: 'action' | 'ifElse' | 'end') => {
     setShowMenu(false);
-    data.onSelect(type);
+    if (data?.onSelect) {
+      data.onSelect(type);
+    }
   };
 
   return (
@@ -20,6 +22,7 @@ export default function AddButtonNode({ data }: any) {
           border: '1px solid #ccc',
           borderRadius: 6,
           cursor: 'pointer',
+          background: '#f9f9f9',
         }}
       >
         +
@@ -68,7 +71,7 @@ export default function AddButtonNode({ data }: any) {
               cursor: 'pointer',
             }}
           >
-            🔴 End Node
+            🔚 End Node
           </div>
         </div>
       )}
