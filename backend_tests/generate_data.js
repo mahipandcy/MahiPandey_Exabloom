@@ -1,15 +1,14 @@
 const fs = require("fs");
 const path = require("path");
-const csv = require("csv-parser");
+const Papa = require("papaparse");
 const { faker } = require("@faker-js/faker");
-
 const { Pool } = require("pg");
 
 const pool = new Pool({
-  user: "postgres",       // change if needed
+  user: "postgres",
   host: "localhost",
-  database: "exabloom",   // match your db
-  password: "",           // fill in only if required
+  database: "exabloom",
+  password: "",
   port: 5432,
 });
 
@@ -17,17 +16,23 @@ const messageContents = [];
 
 function loadMessagesFromCSV() {
   return new Promise((resolve, reject) => {
-    fs.createReadStream(path.join(__dirname, "message_content.csv"))
-      .pipe(csv({ headers: false }))
-      .on("data", (row) => {
-        const content = Object.values(row)[0];
-        if (content) messageContents.push(content);
-      })
-      .on("end", () => {
-        console.log(`Loaded ${messageContents.length} messages from CSV`);
-        resolve();
-      })
-      .on("error", reject);
+    const filePath = path.join(__dirname, "message_content.csv");
+
+    fs.readFile(filePath, "utf8", (err, data) => {
+      if (err) return reject(err);
+
+      const parsed = Papa.parse(data, {
+        skipEmptyLines: true,
+      });
+
+      for (const row of parsed.data) {
+        const msg = row[0]?.toString().trim();
+        if (msg) messageContents.push(msg);
+      }
+
+      console.log(`✅ Loaded ${messageContents.length} messages from CSV`);
+      resolve();
+    });
   });
 }
 
@@ -51,11 +56,11 @@ async function generateContactsAndMessages() {
     }
 
     const numMessages = 50;
-
     const messagePromises = [];
 
     for (let j = 0; j < numMessages; j++) {
-      const content = messageContents[Math.floor(Math.random() * messageContents.length)];
+      const rawContent = messageContents[Math.floor(Math.random() * messageContents.length)];
+      const content = rawContent.replace(/[\r\n]+/g, ' ').trim().slice(0, 300);
       const timestamp = faker.date.past(1); // within the past year
 
       messagePromises.push(
@@ -66,7 +71,6 @@ async function generateContactsAndMessages() {
       );
     }
 
-    // Wait for all messages to be inserted
     try {
       await Promise.all(messagePromises);
     } catch (err) {
