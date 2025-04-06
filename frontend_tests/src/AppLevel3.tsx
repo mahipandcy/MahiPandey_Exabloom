@@ -37,10 +37,19 @@ export default function AppLevel3() {
     parentId?: string,
     branchIndex?: number
   ) => {
+    let effectiveParentId = parentId;
+    let effectiveBranchIndex = branchIndex;
+
+    if (afterId.includes('-branch-')) {
+      const [parsedParentId, idx] = afterId.split('-branch-');
+      effectiveParentId = parsedParentId;
+      effectiveBranchIndex = parseInt(idx);
+    }
+
     const index = workflowNodes.findIndex((n) => n.id === afterId);
     const depth =
       workflowNodes.filter(
-        (n) => n.parentId === parentId && n.branchIndex === branchIndex
+        (n) => n.parentId === effectiveParentId && n.branchIndex === effectiveBranchIndex
       ).length + 1;
 
     const newId = getId();
@@ -55,8 +64,8 @@ export default function AppLevel3() {
             ? 'End Node'
             : 'Action Node',
       },
-      parentId,
-      branchIndex,
+      parentId: effectiveParentId,
+      branchIndex: effectiveBranchIndex,
       depth,
     };
 
@@ -67,14 +76,14 @@ export default function AppLevel3() {
     const updated = [...workflowNodes];
     updated.splice(index + 1, 0, newNode);
 
-    if (nodeType === 'action' && typeof branchIndex === 'number' && parentId) {
+    if (nodeType === 'action' && typeof effectiveBranchIndex === 'number' && effectiveParentId) {
       const endNodeId = getId();
       updated.splice(index + 2, 0, {
         id: endNodeId,
         type: 'end',
         data: { label: 'End Node' },
-        parentId,
-        branchIndex,
+        parentId: effectiveParentId,
+        branchIndex: effectiveBranchIndex,
         depth: depth + 1,
       });
     }
@@ -171,7 +180,7 @@ export default function AppLevel3() {
               handleAddNodeAfter(n.id, type, n.parentId, n.branchIndex),
           },
           position: { x, y: y + 70 },
-          draggable: false,
+          draggable: true,
         });
       }
 
@@ -188,7 +197,7 @@ export default function AppLevel3() {
             type: 'branchLabelNode',
             data: { label },
             position: { x: bx, y: by },
-            draggable: false,
+            draggable: true,
           });
 
           nodes.push({
@@ -199,7 +208,7 @@ export default function AppLevel3() {
                 handleAddNodeAfter(branchId, type, n.id, idx),
             },
             position: { x: bx, y: by + 60 },
-            draggable: false,
+            draggable: true,
           });
         });
       }
