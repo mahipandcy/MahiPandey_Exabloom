@@ -57,3 +57,29 @@ Searches by:
 - Contact name
 - Phone number
 - Message content
+
+---
+---
+
+## 🧗‍♀️ Challenges Encountered
+
+### 1. Efficiently Handling a Large Volume of Data
+Generating and storing 5 million messages posed performance and memory challenges. I addressed this by:
+- Inserting data in controlled batches
+- Logging progress every 1,000 contacts to monitor script execution
+- Using optimized SQL queries and indexes to minimize database strain
+
+### 2. Cleaning and Loading Multiline CSV Data
+The original CSV file included multiline entries with irregular formatting. I used the `papaparse` library to:
+- Properly parse multiline message content
+- Clean up newline characters (`\n`, `\r\n`) for valid JSON formatting
+
+### 3. Repeating Messages per Contact
+Ensuring each contact had exactly 50 diverse messages while maintaining variety from the CSV required logic to:
+- Loop through the message pool without exhausting it
+- Avoid very long message blocks repeating for a single contact
+
+### 4. Performance Bottlenecks in Queries
+Naively querying the latest message for every contact in real-time was too slow at scale. I solved this by:
+- Creating a **materialized view** to precompute and store only the most recent message per contact
+- Adding an **index on the timestamp** to speed up sorting and pagination
