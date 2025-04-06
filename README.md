@@ -1,7 +1,11 @@
 # MahiPandey_Exabloom
 
 ## 🖥️ Frontend Tests
-*(Add your frontend details here)*
+This frontend project is built using **React**, **TypeScript**, and **React Flow**, designed to demonstrate multi-level dynamic workflow building capabilities. It covers:
+
+- Static workflow layout (Start → End)
+- Action node addition with label editing and deletion
+- Conditional If/Else logic with editable branches and nested paths
 
 ---
 
