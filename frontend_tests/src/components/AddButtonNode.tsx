@@ -71,7 +71,6 @@ export default function AddButtonNode({ data }: any) {
               cursor: 'pointer',
             }}
           >
-            🔚 End Node
           </div>
         </div>
       )}

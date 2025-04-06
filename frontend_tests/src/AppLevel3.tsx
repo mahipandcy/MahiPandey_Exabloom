@@ -1,3 +1,4 @@
+// AppLevel3.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import ReactFlow, {
   Background,
@@ -14,7 +15,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { nodeTypes } from './nodeTypes';
 
-let id = 1;
+let id = 2; // Start is node-1, end is node-2
 const getId = () => `node-${id++}`;
 
 type WorkflowNode = {
@@ -29,24 +30,33 @@ type WorkflowNode = {
 export default function AppLevel3() {
   const [workflowNodes, setWorkflowNodes] = useState<WorkflowNode[]>([
     { id: 'start', type: 'start', data: { label: 'Start Node' } },
+    { id: 'end', type: 'end', data: { label: 'End Node' } },
   ]);
 
   const handleAddNodeAfter = (
     afterId: string,
-    nodeType: 'action' | 'ifElse' | 'end',
+    nodeType: 'action' | 'ifElse',
     parentId?: string,
     branchIndex?: number
   ) => {
     let effectiveParentId = parentId;
     let effectiveBranchIndex = branchIndex;
+    let insertIndex = -1;
 
     if (afterId.includes('-branch-')) {
       const [parsedParentId, idx] = afterId.split('-branch-');
       effectiveParentId = parsedParentId;
       effectiveBranchIndex = parseInt(idx);
+
+      const branchNodes = workflowNodes.filter(
+        (n) => n.parentId === parsedParentId && n.branchIndex === parseInt(idx)
+      );
+      const lastNode = branchNodes[branchNodes.length - 1];
+      insertIndex = workflowNodes.findIndex((n) => n.id === lastNode?.id);
+    } else {
+      insertIndex = workflowNodes.findIndex((n) => n.id === afterId);
     }
 
-    const index = workflowNodes.findIndex((n) => n.id === afterId);
     const depth =
       workflowNodes.filter(
         (n) => n.parentId === effectiveParentId && n.branchIndex === effectiveBranchIndex
@@ -57,12 +67,7 @@ export default function AppLevel3() {
       id: newId,
       type: nodeType,
       data: {
-        label:
-          nodeType === 'ifElse'
-            ? 'If/Else Node'
-            : nodeType === 'end'
-            ? 'End Node'
-            : 'Action Node',
+        label: nodeType === 'ifElse' ? 'If/Else Node' : 'Action Node',
       },
       parentId: effectiveParentId,
       branchIndex: effectiveBranchIndex,
@@ -74,19 +79,7 @@ export default function AppLevel3() {
     }
 
     const updated = [...workflowNodes];
-    updated.splice(index + 1, 0, newNode);
-
-    if (nodeType === 'action' && typeof effectiveBranchIndex === 'number' && effectiveParentId) {
-      const endNodeId = getId();
-      updated.splice(index + 2, 0, {
-        id: endNodeId,
-        type: 'end',
-        data: { label: 'End Node' },
-        parentId: effectiveParentId,
-        branchIndex: effectiveBranchIndex,
-        depth: depth + 1,
-      });
-    }
+    updated.splice(insertIndex + 1, 0, newNode);
 
     setWorkflowNodes(updated);
   };
@@ -165,7 +158,7 @@ export default function AppLevel3() {
                 label: n.data.label,
                 onDelete: (id: string) =>
                   setWorkflowNodes((prev) => prev.filter((node) => node.id !== id)),
-                onSelect: (type: 'action' | 'ifElse' | 'end') =>
+                onSelect: (type: 'action' | 'ifElse') =>
                   handleAddNodeAfter(n.id, type, n.parentId, n.branchIndex),
               },
         draggable: true,
@@ -176,7 +169,7 @@ export default function AppLevel3() {
           id: `add-${n.id}`,
           type: 'addButton',
           data: {
-            onSelect: (type: 'action' | 'ifElse' | 'end') =>
+            onSelect: (type: 'action' | 'ifElse') =>
               handleAddNodeAfter(n.id, type, n.parentId, n.branchIndex),
           },
           position: { x, y: y + 70 },
@@ -197,14 +190,14 @@ export default function AppLevel3() {
             type: 'branchLabelNode',
             data: { label },
             position: { x: bx, y: by },
-            draggable: true,
+            draggable: false,
           });
 
           nodes.push({
             id: `add-${branchId}`,
             type: 'addButton',
             data: {
-              onSelect: (type: 'action' | 'ifElse' | 'end') =>
+              onSelect: (type: 'action' | 'ifElse') =>
                 handleAddNodeAfter(branchId, type, n.id, idx),
             },
             position: { x: bx, y: by + 60 },
@@ -248,10 +241,6 @@ export default function AppLevel3() {
         if (nextNode && nextNode.parentId === node.parentId && nextNode.branchIndex === node.branchIndex) {
           edges.push({ id: `e-add-${node.id}-${nextNode.id}`, source: `add-${node.id}`, target: nextNode.id, type: 'smoothstep' });
         }
-      }
-
-      if (node.type === 'end' && node.parentId) {
-        edges.push({ id: `e-${node.parentId}-${node.id}`, source: node.parentId, target: node.id, type: 'smoothstep' });
       }
     });
 
