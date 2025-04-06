@@ -1,12 +1,14 @@
-CREATE TABLE IF NOT EXISTS contacts (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100),
-    phone_number VARCHAR(30) UNIQUE
+DROP TABLE IF EXISTS messages, contacts;
+
+CREATE TABLE contacts (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100),
+  phone_number VARCHAR(30)
 );
 
-CREATE TABLE IF NOT EXISTS messages (
-    id SERIAL PRIMARY KEY,
-    contact_id INTEGER REFERENCES contacts(id),
-    content TEXT,
-    timestamp TIMESTAMP
+CREATE TABLE messages (
+  id SERIAL PRIMARY KEY,
+  contact_id INT REFERENCES contacts(id),
+  content TEXT,
+  timestamp TIMESTAMP
 );
