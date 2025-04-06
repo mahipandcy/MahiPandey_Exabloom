@@ -43,4 +43,28 @@ cd MahiPandey_Exabloom/frontend_tests
 npm install
 
 # Run the app
-npm run dev
+npm run start
+```
+---
+## 🧩 Challenges Encountered
+---
+
+### 1. Learning React Flow from Scratch  
+This was my first time working with React Flow, which has a unique mental model around nodes, edges, and custom components. I overcame this by:
+- Studying the [React Flow documentation](https://reactflow.dev/docs/)
+- Exploring open-source examples to understand best practices
+- Experimenting with different node types and dynamic layouts through hands-on trial and error
+
+---
+
+### 2. Conditional Branch Layout
+Ensuring consistent and readable branch layouts as users added or renamed branches posed layout issues. I addressed this by:
+- Dynamically calculating the X position of each branch node
+- Center-aligning branches horizontally based on total branch count
+
+---
+
+### 3. Modular Logic Across Levels
+Adding functionality across levels without cluttering earlier stages was important for code clarity. I handled this by:
+- Modularizing all custom nodes (`AddButtonNode`, `IfElseNode`, `ActionNode`)
+- Using props and data structures to handle all logic types without repeating code
