@@ -23,11 +23,6 @@
 
 ---
 # 🔧 Setup Instructions – Workflow Builder
-
-This is the frontend submission for the Exabloom Technical Test.
-
-📁 GitHub Repo: [MahiPandey_Exabloom](https://github.com/mahipandcy/MahiPandey_Exabloom/tree/main/frontend_tests)
-
 ---
 
 ## 🧱 Prerequisites
