@@ -1,66 +1,94 @@
 const fs = require("fs");
+const path = require("path");
 const csv = require("csv-parser");
-const faker = require("faker");
+const { faker } = require("@faker-js/faker");
+
 const { Pool } = require("pg");
 
 const pool = new Pool({
-  user: "your_pg_user",
+  user: "postgres",       // change if needed
   host: "localhost",
-  database: "your_db_name",
-  password: "your_password",
+  database: "exabloom",   // match your db
+  password: "",           // fill in only if required
   port: 5432,
 });
 
 const messageContents = [];
 
-// Step 1: Load CSV Messages
-function loadMessages() {
-  return new Promise((resolve) => {
-    fs.createReadStream("backend_tests/message_content.csv")
+function loadMessagesFromCSV() {
+  return new Promise((resolve, reject) => {
+    fs.createReadStream(path.join(__dirname, "message_content.csv"))
       .pipe(csv({ headers: false }))
       .on("data", (row) => {
         const content = Object.values(row)[0];
         if (content) messageContents.push(content);
       })
-      .on("end", resolve);
+      .on("end", () => {
+        console.log(`Loaded ${messageContents.length} messages from CSV`);
+        resolve();
+      })
+      .on("error", reject);
   });
 }
 
-// Step 2: Generate Contacts and Messages
-async function generateData() {
-  console.log("Loading CSV...");
-  await loadMessages();
+async function generateContactsAndMessages() {
+  console.log("Generating contacts and messages...");
 
-  console.log("Inserting contacts...");
   for (let i = 0; i < 100000; i++) {
-    const name = faker.name.findName();
-    const phone = faker.phone.phoneNumber();
+    const name = faker.person.fullName();
+    const phone = faker.phone.number();
 
-    const result = await pool.query(
-      "INSERT INTO contacts(name, phone_number) VALUES($1, $2) RETURNING id",
-      [name, phone]
-    );
-    const contactId = result.rows[0].id;
-
-    // Generate messages for contact (average 50 per contact)
-    const numMessages = Math.floor(Math.random() * 100);
-    const queries = [];
-    for (let j = 0; j < numMessages; j++) {
-      const content = messageContents[Math.floor(Math.random() * messageContents.length)];
-      const timestamp = faker.date.past(1); // within 1 year
-      queries.push(pool.query(
-        "INSERT INTO messages(contact_id, content, timestamp) VALUES($1, $2, $3)",
-        [contactId, content, timestamp]
-      ));
+    let contactId;
+    try {
+      const res = await pool.query(
+        "INSERT INTO contacts (name, phone_number) VALUES ($1, $2) RETURNING id",
+        [name, phone]
+      );
+      contactId = res.rows[0].id;
+    } catch (err) {
+      console.error("Error inserting contact:", err);
+      continue;
     }
 
-    await Promise.all(queries);
+    const numMessages = Math.floor(Math.random() * 100); // up to 100 messages
+    const messagePromises = [];
 
-    if (i % 1000 === 0) console.log(`${i} contacts inserted`);
+    for (let j = 0; j < numMessages; j++) {
+      const content = messageContents[Math.floor(Math.random() * messageContents.length)];
+      const timestamp = faker.date.past(1); // within the past year
+
+      messagePromises.push(
+        pool.query(
+          "INSERT INTO messages (contact_id, content, timestamp) VALUES ($1, $2, $3)",
+          [contactId, content, timestamp]
+        )
+      );
+    }
+
+    // Wait for all messages to be inserted
+    try {
+      await Promise.all(messagePromises);
+    } catch (err) {
+      console.error("Error inserting messages:", err);
+    }
+
+    if (i % 1000 === 0) {
+      console.log(`${i} contacts created...`);
+    }
   }
 
-  console.log("Done.");
-  pool.end();
+  console.log("✅ Data generation complete!");
+  await pool.end();
 }
 
-generateData();
+async function main() {
+  try {
+    await loadMessagesFromCSV();
+    await generateContactsAndMessages();
+  } catch (err) {
+    console.error("Error:", err);
+    pool.end();
+  }
+}
+
+main();
